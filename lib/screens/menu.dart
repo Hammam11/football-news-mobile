@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:football_news/widgets/left_drawer.dart';
 import 'package:football_news/screens/newslist_form.dart';
+import 'package:football_news/screens/news_entry_list.dart';
+import 'package:football_news/screens/login.dart';
+import 'package:pbp_django_auth/pbp_django_auth.dart';
+import 'package:provider/provider.dart';
 
 class MyHomePage extends StatelessWidget {
   MyHomePage({super.key});
@@ -19,7 +23,6 @@ class MyHomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        // Judul aplikasi "Football News" dengan teks putih dan tebal.
         title: const Text(
           'Football News',
           style: TextStyle(
@@ -27,7 +30,6 @@ class MyHomePage extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        // Warna latar belakang AppBar diambil dari skema warna tema aplikasi.
         backgroundColor: Theme.of(context).colorScheme.primary,
       ),
       drawer: LeftDrawer(),
@@ -118,32 +120,57 @@ class ItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final request = context.watch<CookieRequest>();
+
     return Material(
       color: Theme.of(context).colorScheme.secondary,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
-        // Area responsif terhadap sentuhan
-        onTap: () {
-          // Memunculkan SnackBar ketika diklik
+        onTap: () async {
+          // Tampilkan snackbar info
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
             ..showSnackBar(
-              SnackBar(
-                content: Text("Kamu telah menekan tombol ${item.name}!"),
-              ),
+              SnackBar(content: Text("Kamu menekan tombol ${item.name}!")),
             );
 
-          // Navigate ke route sesuai tombol
+          // Navigasi sesuai tombol
           if (item.name == "Add News") {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => const NewsFormPage(),
-              ),
+              MaterialPageRoute(builder: (context) => const NewsFormPage()),
             );
+          } else if (item.name == "See Football News") {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const NewsEntryListPage()),
+            );
+          } else if (item.name == "Logout") {
+            final response = await request.logout(
+              "http://localhost:8000/auth/logout/",
+            );
+
+            if (context.mounted) {
+              String message = response["message"];
+              if (response["status"] == true) {
+                String uname = response["username"];
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("$message See you again, $uname."),
+                  ),
+                );
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginPage()),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Logout gagal: $message")),
+                );
+              }
+            }
           }
         },
-
         child: Container(
           padding: const EdgeInsets.all(8),
           child: Center(
@@ -151,7 +178,7 @@ class ItemCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(item.icon, color: Colors.white, size: 30.0),
-                const Padding(padding: EdgeInsets.all(3)),
+                const SizedBox(height: 3),
                 Text(
                   item.name,
                   textAlign: TextAlign.center,
